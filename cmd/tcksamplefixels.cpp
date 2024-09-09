@@ -60,9 +60,9 @@ void usage ()
   + Argument ("fixel_in", "the input fixel data file (within the fixel directory)").type_image_in ()
   + Argument ("tracks",   "the input track file ").type_tracks_in ()
   + Argument ("tsf_fixel_indices",      "the output track scalar file indicating the index of the fixel that is most parallel to the streamline segment").type_file_out ()
-  + Argument ("tsf_values_par", "blah").type_file_out ()
-  + Argument ("tsf_values_perp", "blah").type_file_out ()
-  + Argument ("tsf_values_perpav", "blah").type_file_out ();
+  + Argument ("tsf_values_par", "the output file containing the metric corresponding to the fixel most parallel to the streamline segment").type_file_out ()
+  + Argument ("tsf_values_perp", "the output file containing the metric corresponding to the fixel most perpendicular to the streamline segment").type_file_out ()
+  + Argument ("tsf_values_perpav", "the output file containing the average metric from all fixels except the most parallel one").type_file_out ();
 
   OPTIONS
   + Option ("angle", "the max anglular threshold for computing correspondence "
@@ -156,13 +156,11 @@ void run ()
           in_index_image.index(3) = 1;
           index_type offset = in_index_image.value();
 
-          std::printf("Streamline %d, Point %d, nfixels %d, vector is [%1.2f %1.2f %1.2f]",streamline_index,int(p), int(num_fixels_in_voxel), dir[0], dir[1], dir[2] );
-          std::printf("  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
+          //std::printf("Streamline %d, Point %d, nfixels %d, vector is [%1.2f %1.2f %1.2f]",streamline_index,int(p), int(num_fixels_in_voxel), dir[0], dir[1], dir[2] );
+          //std::printf("  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
 
           if ( num_fixels_in_voxel < 1 ){
-            std::printf(" No fixels exist in this position: ");
-            std::printf("  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
-
+            std::fprintf(stderr," No fixels exist in streamline %d point %d Position (x,y,z): %1.2f, %1.2f, %1.2f\n", streamline_index, int(p), voxel_pos[0],voxel_pos[1],voxel_pos[2]);
           }
           
           std::vector<float> fixel_values;
@@ -172,7 +170,7 @@ void run ()
             const float dp = abs (dir.dot (Eigen::Vector3f (in_directions_image.row(1))));
             in_data_image.index(0) = offset + fixel;
             const float value = in_data_image.value();
-            std::printf("  fixel %d, vector is [%1.2f\t%1.2f\t%1.2f]\tdp is %1.2f, value is %1.4f\n", int(fixel), in_directions_image.row(1)[0],in_directions_image.row(1)[1],in_directions_image.row(1)[2], dp, float(value));
+            //std::fprintf(stdout,"  fixel %d, vector is [%1.2f\t%1.2f\t%1.2f]\tdp is %1.2f, value is %1.4f\n", int(fixel), in_directions_image.row(1)[0],in_directions_image.row(1)[1],in_directions_image.row(1)[2], dp, float(value));
             fixel_values.push_back(value);
             if (dp > largest_dp) {
               largest_dp = dp;
@@ -184,13 +182,13 @@ void run ()
             }
           }
           if (largest_dp < angular_threshold_dp) {
-              std::printf("  :( largest_dp %g is lower than angular_threshold_dp %g\n",largest_dp,angular_threshold_dp);
+              std::fprintf(stderr,"  largest_dp %g is lower than angular_threshold_dp %g\n",largest_dp,angular_threshold_dp);
               closest_fixel_index = -1;
           }
 
           if (closest_fixel_index < 0) {
-            std::printf("    ---- No fixel assigned here:");
-            std::printf("  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
+            std::fprintf(stderr,"    ---- No fixel assigned here:");
+            std::fprintf(stderr,"  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
           } else {
             value_par  = fixel_values[closest_fixel_index];
             value_perp = fixel_values[farthest_fixel_index];
