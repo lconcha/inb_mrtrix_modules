@@ -1,0 +1,28 @@
+compiling separate project against:
+    ../mrtrix3
+
+active config is default
+
+reading configuration from "../mrtrix3/config"...
+
+getting MRtrix version from folder "../mrtrix3"...
+  fetching version information from "MRTRIX_BASE_VERSION" in "../mrtrix3/core/version.h": 3.0.4
+  fetching version information from git in folder "../mrtrix3": not found
+Using MRtrix version "3.0.4"
+version file "../mrtrix3/core/version.cpp" is up to date
+version file "../mrtrix3/src/exec_version.cpp" is up to date
+
+getting MRtrix project version from current folder...
+  fetching version information from "MRTRIX_PROJECT_VERSION" in "src/project_version.h": not found
+  fetching version information from git in folder ".": not found
+Using MRtrix project version "unknown"
+version file "src/project_version.cpp" is up to date
+
+compiling TODO list...
+building targets: bin/tcksamplefixels bin/tck2fixeldots
+TODO list contains 0 items
+
+
+
+Build will use 32 threads
+

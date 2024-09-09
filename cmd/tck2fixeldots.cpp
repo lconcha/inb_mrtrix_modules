@@ -14,6 +14,7 @@
  * For more details, see http://www.mrtrix.org/.
  */
 
+// @ts-ignore
 #include "command.h"
 #include "progressbar.h"
 #include "algo/loop.h"
