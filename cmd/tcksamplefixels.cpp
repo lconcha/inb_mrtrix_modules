@@ -54,7 +54,10 @@ void usage ()
 
   DESCRIPTION
   + "This command identifies, for each streamline point, the index of the underlying fixel that is most parallel with the streamline segment."
-    "The output is a .tsf file indicating fixel indices at each point.";
+    "The outputs are .tsf files indicating the indices of the most parallel fixel, the fixel values of the most parallel and most perpendicular fixels,"
+    "as well as the average value of all fixels except the parallel one (i.e., the average perpendicular value).\n\n"
+    "NOTE that a value of -1 (minus one) will be written to the tsf files in any point where there is no fixel value "
+    "(this can happen if there is no fixels in that position, or for perpendicular values if nfixels=1 in that position).";
 
   ARGUMENTS
   + Argument ("fixel_in", "the input fixel data file (within the fixel directory)").type_image_in ()
