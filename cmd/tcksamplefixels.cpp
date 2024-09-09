@@ -47,8 +47,8 @@ using Fixel::index_type;
 void usage ()
 {
 
-  AUTHOR = "David Raffelt (david.raffelt@florey.edu.au), "
-           "hacked by Luis Concha (lconcha@unam.mx) in January 2024";
+  AUTHOR = "Original implementation by David Raffelt (david.raffelt@florey.edu.au), "
+           "Hacked by Luis Concha (lconcha@unam.mx) in January-August 2024";
 
   SYNOPSIS = "Map corresponding fixel indices to a track scalar file based on an input tractogram";
 
