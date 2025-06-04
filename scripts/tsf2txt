@@ -1,0 +1,50 @@
+#!/usr/bin/env python
+import numpy as np
+import argparse
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../python')))
+from read_tsf import *
+
+
+
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description="Convert tsf to txt."
+    )
+
+    parser.add_argument(
+        "tsf",
+        type=str,
+        help="Path to the input .tsf file."
+    )
+    parser.add_argument(
+        "output_txt",
+        type=str,
+        help="Path for the output txt file."
+    )
+    args = parser.parse_args()
+
+
+
+
+print(f"Reading TSF file: {args.tsf}")
+header, streamlines = read_tsf(args.tsf)
+
+nStreamlines = len(streamlines)
+
+print(f"Saving to TXT file: {args.output_txt} ...")
+with open(args.output_txt, 'w') as f:
+    f.write(f"# TSF to TXT conversion of {args.tsf}\n")
+    f.write(f"# Number of tracks: {header.get('count')}\n")
+    f.write(f"# timestamp: {header.get('timestamp', 'N/A')}\n")
+for idx,s in enumerate(streamlines):
+    if idx % 1000 == 0 or idx == nStreamlines - 1:
+        print(f"  Progress: {idx+1}/{nStreamlines} streamlines", end='\r', flush=True)
+    line = ' '.join(map(str, s.flatten()))
+    with open(args.output_txt, 'a') as f:
+        f.write(line)
+        f.write("\n")  # Separate streamlines with a newline
+print(f"\nConversion complete. {nStreamlines} streamlines saved to {args.output_txt}.")

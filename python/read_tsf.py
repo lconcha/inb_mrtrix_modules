@@ -4,7 +4,7 @@ import numpy as np
 filename = "/misc/sherrington/lconcha/TMP/glaucoma/fs_glaucoma/sub-79864/dwi/rh_fsLR-32k_fa.tsf"
 
 
-def read_mrtrix_tsf(filename):
+def read_tsf(filename):
     with open(filename, 'rb') as f:
         # Read the header
         header = {}
