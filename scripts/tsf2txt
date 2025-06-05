@@ -4,7 +4,7 @@ import argparse
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../python')))
-from read_tsf import *
+from read_tsf import read_tsf
 
 
 
@@ -36,15 +36,17 @@ header, streamlines = read_tsf(args.tsf)
 nStreamlines = len(streamlines)
 
 print(f"Saving to TXT file: {args.output_txt} ...")
+nTotalPoints = 0
 with open(args.output_txt, 'w') as f:
     f.write(f"# TSF to TXT conversion of {args.tsf}\n")
     f.write(f"# Number of tracks: {header.get('count')}\n")
     f.write(f"# timestamp: {header.get('timestamp', 'N/A')}\n")
 for idx,s in enumerate(streamlines):
+    nTotalPoints += len(s)
     if idx % 1000 == 0 or idx == nStreamlines - 1:
         print(f"  Progress: {idx+1}/{nStreamlines} streamlines", end='\r', flush=True)
     line = ' '.join(map(str, s.flatten()))
     with open(args.output_txt, 'a') as f:
         f.write(line)
         f.write("\n")  # Separate streamlines with a newline
-print(f"\nConversion complete. {nStreamlines} streamlines saved to {args.output_txt}.")
+print(f"\nDone. {nStreamlines} streamlines with a total of {nTotalPoints} data points saved to {args.output_txt}.")
