@@ -112,7 +112,7 @@ void usage ()
   + Argument ("fixel_data_out", "the name of the fixel data image.").type_text();
 
   OPTIONS
-  + Option ("angle", "the max angle threshold for assigning streamline tangents to fixels (Default: " + str(DEFAULT_ANGLE_THRESHOLD, 2) + " degrees)")
+  + Option ("angle", "the maximum angle threshold for assigning streamline tangents to fixels (Default: " + str(DEFAULT_ANGLE_THRESHOLD, 2) + " degrees)")
   + Argument ("value").type_float (0.0, 90.0);
 }
 
