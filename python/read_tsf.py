@@ -14,7 +14,7 @@ def read_tsf(filename):
                 break
             if ':' not in line:
                 continue  # skip lines without key:value
-            key, value = line.split(':')
+            key, value = line.split(':', 1) # only the first : separates key and value
             header[key.strip()] = value.strip()
 
         # Extract metadata
