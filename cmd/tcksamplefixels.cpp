@@ -41,7 +41,7 @@ using Fixel::index_type;
 
 
 #define DEFAULT_ANGULAR_THRESHOLD 45.0
-
+#define DEFAULT_NOFIXEL_VALUE -1.0
 
 
 void usage ()
@@ -71,8 +71,9 @@ void usage ()
   + Option ("angle", "the max anglular threshold for computing correspondence "
                      "between a fixel direction and track tangent "
                      "(default = " + str(DEFAULT_ANGULAR_THRESHOLD, 2) + " degrees)")
-  + Argument ("value").type_float (0.001, 90.0);
-
+  + Argument ("value").type_float (0.001, 90.0)
+  + Option ("nofixel_value", "the value to write in the track scalar file when no fixel is found at a streamline point (default = " + str(DEFAULT_NOFIXEL_VALUE, 2) + ")")
+  + Argument ("value").type_float ();
 }
 
 using SetVoxelDir = DWI::Tractography::Mapping::SetVoxelDir;
@@ -107,6 +108,8 @@ void run ()
 
   float angular_threshold = get_option_value ("angle", DEFAULT_ANGULAR_THRESHOLD);
   const float angular_threshold_dp = cos (angular_threshold * (Math::pi / 180.0));
+
+  float nofixel_value = get_option_value ("nofixel_value", DEFAULT_NOFIXEL_VALUE);
 
   const size_t num_tracks = properties["count"].empty() ? 0 : to<int> (properties["count"]);
 
@@ -148,11 +151,11 @@ void run ()
           dir.normalize();
           float largest_dp = 0.0f;
           float lowest_dp  = 1.0f;
-          float value_par  = -1;
-          float value_perp = -1;
-          float value_perpav = -1;
-          int32_t closest_fixel_index = -1;
-          int32_t farthest_fixel_index = -1;
+          float value_par  = nofixel_value;
+          float value_perp = nofixel_value;
+          float value_perpav = nofixel_value;
+          int32_t closest_fixel_index = nofixel_value;
+          int32_t farthest_fixel_index = nofixel_value;
 
           in_index_image.index(3) = 0;
           index_type num_fixels_in_voxel = in_index_image.value();
@@ -186,7 +189,7 @@ void run ()
           }
           if (largest_dp < angular_threshold_dp) {
               std::fprintf(stderr,"  largest_dp %g is lower than angular_threshold_dp %g\n",largest_dp,angular_threshold_dp);
-              closest_fixel_index = -1;
+              closest_fixel_index = nofixel_value;
           }
 
           if (closest_fixel_index < 0) {
@@ -198,7 +201,7 @@ void run ()
             //std::printf("    Fixel %d assigned as parallel, with a dot product of %1.2f and value of %1.4f\n", int(closest_fixel_index), largest_dp, value_par );
             
             if (num_fixels_in_voxel < 2){
-              value_perp = -1;
+              value_perp = nofixel_value;
             } else {
               //std::printf("    Fixel %d is the most perpendicular, with a dot product of %1.2f and value of %1.4f\n", int(farthest_fixel_index), lowest_dp, value_perp );
               fixel_values.erase(fixel_values.begin()+int(closest_fixel_index));//remove par value
