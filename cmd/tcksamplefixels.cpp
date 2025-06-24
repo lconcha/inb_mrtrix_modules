@@ -165,6 +165,8 @@ void run ()
           //std::printf("Streamline %d, Point %d, nfixels %d, vector is [%1.2f %1.2f %1.2f]",streamline_index,int(p), int(num_fixels_in_voxel), dir[0], dir[1], dir[2] );
           //std::printf("  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
 
+          //std::fprintf(stdout,"value_par is  %1.2f, value_perp is %1.2f, value_perpav is %1.2f\n",value_par,value_perp,value_perpav);
+
           if ( num_fixels_in_voxel < 1 ){
             std::fprintf(stderr," No fixels exist in streamline %d point %d Position (x,y,z): %1.2f, %1.2f, %1.2f\n", streamline_index, int(p), voxel_pos[0],voxel_pos[1],voxel_pos[2]);
           }
@@ -189,12 +191,16 @@ void run ()
           }
           if (largest_dp < angular_threshold_dp) {
               std::fprintf(stderr,"  largest_dp %g is lower than angular_threshold_dp %g\n",largest_dp,angular_threshold_dp);
-              closest_fixel_index = nofixel_value;
+              closest_fixel_index = -1;
           }
 
           if (closest_fixel_index < 0) {
             std::fprintf(stderr,"    ---- No fixel assigned here:");
             std::fprintf(stderr,"  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
+            fixelids[p]       = nofixel_value;
+            values_par[p]     = nofixel_value;
+            values_perp[p]    = nofixel_value;
+            values_perpav[p]  = nofixel_value;   
           } else {
             value_par  = fixel_values[closest_fixel_index];
             value_perp = fixel_values[farthest_fixel_index];
@@ -228,4 +234,3 @@ void run ()
     
   }
 }
-
