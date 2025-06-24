@@ -180,18 +180,18 @@ void run ()
               std::cout << "  Parallel scalar value is: " << value  << std::endl;
               scalars[p] = value;
             } else {
-              scalars[p] = NAN;
+              scalars[p] = -1;
             }
           } else {
-            std::cout << "  [WARN] Largest dp below threshold (" << angular_threshold_dp << "), setting parallel scalar to NAN." << std::endl;
-            scalars[p] = NAN;
+            std::cout << "  [WARN] Largest dp below threshold (" << angular_threshold_dp << "), setting parallel scalar to -1." << std::endl;
+            scalars[p] = -1;
           }
           // Most perpendicular
           if (tsf_writer_perp) {
             if (num_fixels_in_voxel == 1) {
               // If there's only one fixel, we can directly assign it
-              scalars_perp[p] = NaN;
-              std::cout << "  [WARN] Only one fixel found, setting perp to NAN." << std::endl;
+              scalars_perp[p] = -1;
+              std::cout << "  [WARN] Only one fixel found, setting perp to -1." << std::endl;
             } else {
                 in_data_image.index(0) = offset + perp_fixel_index;
                 const float value_perp = in_data_image.value();
@@ -203,8 +203,8 @@ void run ()
           if (tsf_writer_perpav) {
             if (num_fixels_in_voxel == 1) {
               // If there's only one fixel, we can directly assign it
-              scalars_avg[p] = NaN;
-              std::cout << "  [WARN] Only one fixel found, setting perpav to NAN." << std::endl;
+              scalars_avg[p] = -1;
+              std::cout << "  [WARN] Only one fixel found, setting perpav to -1." << std::endl;
             } else {
               float sum = 0.0f;
               int count = 0;
