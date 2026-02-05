@@ -162,13 +162,23 @@ void run ()
           in_index_image.index(3) = 1;
           index_type offset = in_index_image.value();
 
-          //std::printf("Streamline %d, Point %d, nfixels %d, vector is [%1.2f %1.2f %1.2f]",streamline_index,int(p), int(num_fixels_in_voxel), dir[0], dir[1], dir[2] );
+          std::printf("Streamline %d (of %d-1), Point %d (of %d-1), nfixels %d, segment vector is [%1.2f %1.2f %1.2f]\n",streamline_index,  int(num_tracks), int(p), int(tck.size()), int(num_fixels_in_voxel), dir[0], dir[1], dir[2] );
           //std::printf("  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
 
           //std::fprintf(stdout,"value_par is  %1.2f, value_perp is %1.2f, value_perpav is %1.2f\n",value_par,value_perp,value_perpav);
 
           if ( num_fixels_in_voxel < 1 ){
             std::fprintf(stderr," No fixels exist in streamline %d point %d Position (x,y,z): %1.2f, %1.2f, %1.2f\n", streamline_index, int(p), voxel_pos[0],voxel_pos[1],voxel_pos[2]);
+            std::printf("    Most parallel fixel index :     %d\n",int(nofixel_value));
+            std::printf("    Most perpendicular fixel index: %d\n",int(nofixel_value));
+            std::printf("    Parallel fixel value :          %1.3f\n",nofixel_value);
+            std::printf("    Perpendicular fixel value :     %1.3f\n",nofixel_value);
+            std::printf("    Perpendicular_av fixel value :  %1.3f\n",nofixel_value);
+            fixelids[p]      = nofixel_value;
+            values_par[p]    = nofixel_value;
+            values_perp[p]   = nofixel_value;
+            values_perpav[p] = nofixel_value;
+            continue;
           }
           
           std::vector<float> fixel_values;
@@ -178,7 +188,7 @@ void run ()
             const float dp = abs (dir.dot (Eigen::Vector3f (in_directions_image.row(1))));
             in_data_image.index(0) = offset + fixel;
             const float value = in_data_image.value();
-            //std::fprintf(stdout,"  fixel %d, vector is [%1.2f\t%1.2f\t%1.2f]\tdp is %1.2f, value is %1.4f\n", int(fixel), in_directions_image.row(1)[0],in_directions_image.row(1)[1],in_directions_image.row(1)[2], dp, float(value));
+            std::fprintf(stdout,"  fixel %d, vector is [%1.2f\t%1.2f\t%1.2f]\tdp is %1.2f, value is %1.4f\n", int(fixel), in_directions_image.row(1)[0],in_directions_image.row(1)[1],in_directions_image.row(1)[2], dp, float(value));
             fixel_values.push_back(value);
             if (dp > largest_dp) {
               largest_dp = dp;
@@ -195,33 +205,31 @@ void run ()
           }
 
           if (closest_fixel_index < 0) {
-            std::fprintf(stderr,"    ---- No fixel assigned here:");
+            std::fprintf(stderr,"    ---- No parallel fixel assigned here:");
             std::fprintf(stderr,"  Position (x,y,z): %1.2f, %1.2f, %1.2f\n", voxel_pos[0],voxel_pos[1],voxel_pos[2]);
             fixelids[p]       = nofixel_value;
-            values_par[p]     = nofixel_value;
-            values_perp[p]    = nofixel_value;
-            values_perpav[p]  = nofixel_value;   
+            value_par         = nofixel_value;
           } else {
             value_par  = fixel_values[closest_fixel_index];
-            value_perp = fixel_values[farthest_fixel_index];
-            //std::printf("    Fixel %d assigned as parallel, with a dot product of %1.2f and value of %1.4f\n", int(closest_fixel_index), largest_dp, value_par );
-            
-            if (num_fixels_in_voxel < 2){
-              value_perp = nofixel_value;
-            } else {
-              //std::printf("    Fixel %d is the most perpendicular, with a dot product of %1.2f and value of %1.4f\n", int(farthest_fixel_index), lowest_dp, value_perp );
-              fixel_values.erase(fixel_values.begin()+int(closest_fixel_index));//remove par value
-              value_perpav = accumulate(fixel_values.begin(), fixel_values.end(),0.0) / fixel_values.size();
-            }
-            //std::printf("    Parallel fixel value :          %1.3f\n",value_par);
-            //std::printf("    Perpendicular fixel value :     %1.3f\n",value_perp);
-            //std::printf("    Perpendicular_av fixel value :  %1.3f\n",value_perpav);
-            
-            fixelids[p] = float(closest_fixel_index);
-            values_par[p] = value_par;
-            values_perp[p] = value_perp;
-            values_perpav[p] = value_perpav;            
           }
+            value_perp = fixel_values[farthest_fixel_index];
+          
+            float sum_all = accumulate(fixel_values.begin(), fixel_values.end(), 0.0f);
+            if (closest_fixel_index >= 0 ){
+              value_perpav = (sum_all - fixel_values[closest_fixel_index]) / (fixel_values.size() - 1);
+            } else {
+              value_perpav = sum_all / fixel_values.size();
+            }
+            std::printf("    Most parallel fixel index :     %d\n",int(closest_fixel_index));
+            std::printf("    Most perpendicular fixel index: %d\n",int(farthest_fixel_index));
+            std::printf("    Parallel fixel value :          %1.3f\n",value_par);
+            std::printf("    Perpendicular fixel value :     %1.3f\n",value_perp);
+            std::printf("    Perpendicular_av fixel value :  %1.3f\n",value_perpav);
+            
+            fixelids[p]      = float(closest_fixel_index);
+            values_par[p]    = value_par;
+            values_perp[p]   = value_perp;
+            values_perpav[p] = value_perpav;
         }
       }
     }
