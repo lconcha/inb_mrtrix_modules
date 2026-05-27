@@ -14,46 +14,99 @@ def truncate_streamline(streamline, max_length):
     """
     if len(streamline) < 2:
         return streamline
-
     segment_lengths = np.linalg.norm(streamline[1:] - streamline[:-1], axis=1)
     cumulative_lengths = np.insert(np.cumsum(segment_lengths), 0, 0.0)
 
-    if cumulative_lengths[-1] <= max_length:
+    total_length = cumulative_lengths[-1]
+    if total_length <= max_length:
         return streamline
 
     # Find the index where the cumulative length exceeds max_length
     cutoff_idx = np.searchsorted(cumulative_lengths, max_length)
-    return streamline[:cutoff_idx + 1]
+
+    # If an exact point falls on the cutoff, include it
+    if cutoff_idx < len(cumulative_lengths) and np.isclose(cumulative_lengths[cutoff_idx], max_length):
+        return streamline[:cutoff_idx + 1]
+
+    # Otherwise, interpolate a new endpoint at exactly max_length between the
+    # segment (cutoff_idx-1 -> cutoff_idx) and append it.
+    prev_idx = max(0, cutoff_idx - 1)
+    # Protect against degenerate zero-length segment
+    seg_len = segment_lengths[prev_idx] if prev_idx < len(segment_lengths) else 0.0
+    if seg_len <= 0 or prev_idx + 1 >= len(streamline):
+        return streamline[:cutoff_idx + 1]
+
+    t = (max_length - cumulative_lengths[prev_idx]) / seg_len
+    t = float(np.clip(t, 0.0, 1.0))
+    new_point = (1.0 - t) * streamline[prev_idx] + t * streamline[prev_idx + 1]
+
+    truncated = np.vstack((streamline[: prev_idx + 1], new_point))
+    return truncated
 
 
+
+
+def _hermite_interpolate(p0, p1, p2, p3, mu):
+    """Hermite interpolation using MRtrix's tension=0 weights."""
+    mu2 = mu * mu
+    mu3 = mu2 * mu
+    w0 = 0.5 * (2.0 * mu2 - mu3 - mu)
+    w1 = 1.0 + 1.5 * mu3 - 2.5 * mu2
+    w2 = 2.0 * mu2 + 0.5 * mu - 1.5 * mu3
+    w3 = 0.5 * (mu3 - mu2)
+    return w0 * p0 + w1 * p1 + w2 * p2 + w3 * p3
 
 
 def _resample_single_streamline(streamline, step_size):
     """
-    Resamples a single streamline to have points separated by 'step_size'
-    using linear interpolation (NumPy only).
+    Resamples a single streamline using a fixed-step-size Hermite curve.
     """
     if len(streamline) < 2:
         return streamline
 
     segment_lengths = np.linalg.norm(streamline[1:] - streamline[:-1], axis=1)
-    cumulative_lengths = np.insert(np.cumsum(segment_lengths), 0, 0.0)
-    total_length = cumulative_lengths[-1]
+    keep = np.concatenate(([True], segment_lengths > 1e-6))
+    clean_streamline = streamline[keep]
+    if len(clean_streamline) < 2:
+        return clean_streamline
 
-    if total_length < step_size and len(streamline) <= 2:
-        return streamline
+    start_ext = clean_streamline[0] + (clean_streamline[0] - clean_streamline[1])
+    end_ext = clean_streamline[-1] + (clean_streamline[-1] - clean_streamline[-2])
+    temp = np.vstack((start_ext, clean_streamline, end_ext))
 
-    new_depths = np.arange(0.0, total_length + 1e-9, step_size)
-    if len(new_depths) == 0:
-        return np.array([streamline[0]])
+    out = [temp[1]]
+    index = 1
+    mu_lower = 0.0
 
-    resampled_x = np.interp(new_depths, cumulative_lengths, streamline[:, 0])
-    resampled_y = np.interp(new_depths, cumulative_lengths, streamline[:, 1])
-    resampled_z = np.interp(new_depths, cumulative_lengths, streamline[:, 2])
+    while index < len(temp) - 2:
+        while index < len(temp) - 2 and np.linalg.norm(out[-1] - temp[index + 1]) < step_size:
+            index += 1
+            mu_lower = 0.0
 
-    return np.vstack((resampled_x, resampled_y, resampled_z)).T
+        if index >= len(temp) - 2:
+            break
 
-def resample_tck_file(f_tck_in, f_tck_out, step_size,max_length=None):
+        p_lower = temp[index].copy()
+        p_upper = temp[index + 1].copy()
+        mu_upper = 1.0
+        mu = 0.5 * (mu_lower + mu_upper)
+        p = _hermite_interpolate(temp[index - 1], temp[index], temp[index + 1], temp[index + 2], mu)
+
+        while np.linalg.norm(p_upper - p_lower) > 0.001 * step_size:
+            mu = 0.5 * (mu_lower + mu_upper)
+            p = _hermite_interpolate(temp[index - 1], temp[index], temp[index + 1], temp[index + 2], mu)
+            if np.linalg.norm(p - out[-1]) < step_size:
+                mu_lower = mu
+                p_lower = p
+            else:
+                mu_upper = mu
+                p_upper = p
+
+        out.append(p)
+
+    return np.vstack(out)
+
+def resample_tck_file(f_tck_in, f_tck_out, step_size, max_length=None):
     """
     Loads a .tck file, resamples all its streamlines, and saves to a new .tck.
     """
@@ -82,18 +135,11 @@ def resample_tck_file(f_tck_in, f_tck_out, step_size,max_length=None):
         if streamline.ndim == 1:
             print("Warning: Detected a 1D streamline, reshaping to 2D.")
             streamline = streamline.reshape(1, -1)
-        
-        # First resample at high resolution in case we need to truncate later
-        step_size_hires = step_size / 10.0  # High-resolution step size
-        resampled_sl = _resample_single_streamline(streamline, step_size_hires)
-        
-        # Optionally truncate the streamline if a maximum length is specified
+
         if max_length is not None:
-            resampled_sl = truncate_streamline(resampled_sl, max_length)
+            streamline = truncate_streamline(streamline, max_length)
 
-        # Resample to the final step size
-        resampled_sl = _resample_single_streamline(resampled_sl, step_size)
-
+        resampled_sl = _resample_single_streamline(streamline, step_size)
         resampled_streamlines_data.append(resampled_sl)
     print()
     # In older nibabel versions, 'nibabel.streamlines.Streamlines' might not exist
@@ -147,7 +193,7 @@ if __name__ == '__main__':
         "--step_size",
         type=float,
         default=0.5,
-        help="The desired Euclidean distance (in mm) between consecutive points after resampling. Default: 0.5."
+        help="The desired step size (in mm) along the streamline path after resampling. Default: 0.5."
     )
     parser.add_argument(
     "--max_length",
@@ -160,10 +206,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
 
+    resample_tck_file(
+        f_tck_in=args.input_tck,
+        f_tck_out=args.output_tck,
+        step_size=args.step_size,
+        max_length=args.max_length
+    )
 
-resample_tck_file(
-    f_tck_in=args.input_tck,
-    f_tck_out=args.output_tck,
-    step_size=args.step_size,
-    max_length=args.max_length
-)
