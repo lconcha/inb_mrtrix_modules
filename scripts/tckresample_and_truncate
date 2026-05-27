@@ -12,6 +12,7 @@ def truncate_streamline(streamline, max_length):
     """
     Truncates a streamline to the specified maximum length.
     """
+    streamline = np.asarray(streamline, dtype=np.float64)
     if len(streamline) < 2:
         return streamline
     segment_lengths = np.linalg.norm(streamline[1:] - streamline[:-1], axis=1)
@@ -61,6 +62,7 @@ def _resample_single_streamline(streamline, step_size):
     """
     Resamples a single streamline using a fixed-step-size Hermite curve.
     """
+    streamline = np.asarray(streamline, dtype=np.float64)
     if len(streamline) < 2:
         return streamline
 
@@ -74,7 +76,7 @@ def _resample_single_streamline(streamline, step_size):
     end_ext = clean_streamline[-1] + (clean_streamline[-1] - clean_streamline[-2])
     temp = np.vstack((start_ext, clean_streamline, end_ext))
 
-    out = [temp[1]]
+    out = [temp[1].copy()]
     index = 1
     mu_lower = 0.0
 
@@ -102,9 +104,9 @@ def _resample_single_streamline(streamline, step_size):
                 mu_upper = mu
                 p_upper = p
 
-        out.append(p)
+        out.append(p.copy())
 
-    return np.vstack(out)
+    return np.asarray(np.vstack(out), dtype=np.float32)
 
 def resample_tck_file(f_tck_in, f_tck_out, step_size, max_length=None):
     """
@@ -142,20 +144,13 @@ def resample_tck_file(f_tck_in, f_tck_out, step_size, max_length=None):
         resampled_sl = _resample_single_streamline(streamline, step_size)
         resampled_streamlines_data.append(resampled_sl)
     print()
-    # In older nibabel versions, 'nibabel.streamlines.Streamlines' might not exist
-    # Try using 'nibabel.streamlines.ArraySequence', which is a common internal
-    # representation that should have the necessary methods.
-    try:
-        StreamlinesClass = nib.streamlines.Streamlines # Try the preferred modern way first
-    except AttributeError:
-        # Fallback for older versions if Streamlines is not directly exposed
-        StreamlinesClass = nib.streamlines.ArraySequence # This should exist if load() works
-
-    streamlines_for_tckfile = StreamlinesClass(resampled_streamlines_data)
-
-    
-    # Create a Tractogram with the correct affine
-    tractogram = nib.streamlines.tractogram.Tractogram(streamlines_for_tckfile, affine_to_rasmm=tck.tractogram.affine_to_rasmm)
+    # Create a Tractogram directly from the resampled streamline arrays.
+    # This avoids wrapping the streamlines in a nibabel Streamlines subclass
+    # that may not be compatible with all nibabel/numpy memory backends.
+    tractogram = nib.streamlines.tractogram.Tractogram(
+        resampled_streamlines_data,
+        affine_to_rasmm=tck.tractogram.affine_to_rasmm
+    )
 
 
    
