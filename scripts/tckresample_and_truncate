@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*
 
-
+import os
 import nibabel as nib
 import numpy as np
 import argparse
@@ -106,7 +106,7 @@ def _resample_single_streamline(streamline, step_size):
 
         out.append(p.copy())
 
-    return np.asarray(np.vstack(out), dtype=np.float32)
+    return np.asarray(np.vstack(out), dtype=np.float64)
 
 def resample_tck_file(f_tck_in, f_tck_out, step_size, max_length=None):
     """
@@ -147,10 +147,14 @@ def resample_tck_file(f_tck_in, f_tck_out, step_size, max_length=None):
     # Create a Tractogram directly from the resampled streamline arrays.
     # This avoids wrapping the streamlines in a nibabel Streamlines subclass
     # that may not be compatible with all nibabel/numpy memory backends.
+    # nibabel loads TCK coordinates already in RAS-mm space, so affine_to_rasmm
+    # is identity. Setting it explicitly avoids nibabel's lazy _apply_affine
+    # generator which segfaults with aliased in-place BLAS operations.
     tractogram = nib.streamlines.tractogram.Tractogram(
         resampled_streamlines_data,
-        affine_to_rasmm=tck.tractogram.affine_to_rasmm
+        affine_to_rasmm=np.eye(4)
     )
+    print(f"Finished resampling {nStreamlines} streamlines.")
 
 
    
