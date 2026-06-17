@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+#
+# Helper for building this project (and, when needed, reconfiguring the
+# mrtrix3 core it links against).
+#
+# Why this exists: `../mrtrix3/configure` probes for Qt's `qmake` using
+# whatever PATH the shell has *at configure time*, then bakes the result
+# into `../mrtrix3/config`. On this machine /usr/lib/qt5/bin (where qmake
+# lives) is only added to PATH by interactive shell startup files, so a
+# non-interactive shell fails configure with "Qt qmake not found!". Plain
+# `./build` does NOT need this fix, since it reuses the PATH already saved
+# inside config from the last successful configure run.
+#
+# Usage:
+#   ./configure_and_build                # normal day-to-day build
+#   ./configure_and_build --reconfigure   # rerun mrtrix3/configure first
+#   ./configure_and_build -verbose        # extra args are passed to ./build
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MRTRIX_DIR="$(cd "$SCRIPT_DIR/../mrtrix3" && pwd)"
+QT_BIN=/usr/lib/qt5/bin
+
+if [[ -d "$QT_BIN" && ":$PATH:" != *":$QT_BIN:"* ]]; then
+  export PATH="$QT_BIN:$PATH"
+fi
+
+reconfigure=false
+if [[ "${1:-}" == "--reconfigure" ]]; then
+  reconfigure=true
+  shift
+fi
+
+if $reconfigure; then
+  echo "==> Re-running mrtrix3/configure (PATH includes $QT_BIN for qmake)"
+  (cd "$MRTRIX_DIR" && ./configure)
+fi
+
+cd "$SCRIPT_DIR"
+exec ./build "$@"
