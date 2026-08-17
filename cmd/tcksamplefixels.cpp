@@ -214,7 +214,9 @@ void run ()
             value_perp = fixel_values[farthest_fixel_index];
           
             float sum_all = accumulate(fixel_values.begin(), fixel_values.end(), 0.0f);
-            if (closest_fixel_index >= 0 ){
+            if (fixel_values.size() < 2) {
+              value_perpav = nofixel_value;
+            } else if (closest_fixel_index >= 0 ){
               value_perpav = (sum_all - fixel_values[closest_fixel_index]) / (fixel_values.size() - 1);
             } else {
               value_perpav = sum_all / fixel_values.size();
