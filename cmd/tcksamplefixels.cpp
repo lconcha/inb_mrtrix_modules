@@ -199,7 +199,8 @@ void run ()
               farthest_fixel_index = fixel;
             }
           }
-          if (largest_dp < angular_threshold_dp) {
+          const bool is_sufficiently_parallel = (largest_dp >= angular_threshold_dp);
+          if (!is_sufficiently_parallel) {
               DEBUG("largest_dp " + str(largest_dp,2) + " is lower than angular_threshold_dp " + str(angular_threshold_dp,2) + " (in streamline " + str(streamline_index) + " point " + str(p) + ") ");
               closest_fixel_index = -1;
           }
@@ -211,15 +212,26 @@ void run ()
           } else {
             value_par  = fixel_values[closest_fixel_index];
           }
-            value_perp = fixel_values[farthest_fixel_index];
-          
-            float sum_all = accumulate(fixel_values.begin(), fixel_values.end(), 0.0f);
-            if (fixel_values.size() < 2) {
-              value_perpav = nofixel_value;
-            } else if (closest_fixel_index >= 0 ){
-              value_perpav = (sum_all - fixel_values[closest_fixel_index]) / (fixel_values.size() - 1);
+
+            if (fixel_values.size() == 1) {
+              // only one fixel in the voxel: it can only play one role at a time
+              if (is_sufficiently_parallel) {
+                value_perp   = nofixel_value;
+                value_perpav = nofixel_value;
+              } else {
+                value_perp   = fixel_values[0];
+                value_perpav = fixel_values[0];
+              }
             } else {
-              value_perpav = sum_all / fixel_values.size();
+              value_perp = fixel_values[farthest_fixel_index];
+              const float sum_all = accumulate(fixel_values.begin(), fixel_values.end(), 0.0f);
+              if (closest_fixel_index >= 0) {
+                // exclude the most-parallel fixel, since it was validly assigned to value_par
+                value_perpav = (sum_all - fixel_values[closest_fixel_index]) / (fixel_values.size() - 1);
+              } else {
+                // no fixel qualified as "most parallel", so nothing to exclude
+                value_perpav = sum_all / fixel_values.size();
+              }
             }
             DEBUG("    Most parallel fixel index :     " + str(int(closest_fixel_index)));
             DEBUG("    Most perpendicular fixel index: " + str(int(farthest_fixel_index)));
